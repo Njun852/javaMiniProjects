@@ -1,5 +1,5 @@
+package mazegame;
 import java.util.ArrayList;
-
 
 public class Maze extends Game{
     private String[][] mazeMap;
@@ -11,9 +11,7 @@ public class Maze extends Game{
         this.width = width;
         this.height = height;
     }
-    public Maze(){
 
-    }
     public String[][] createMaze(){
         String maze[][] = new String[this.height][this.width];
 
@@ -36,7 +34,6 @@ public class Maze extends Game{
     public void createRandomMaze(){
         MazeGenerator generator = new MazeGenerator(this.width, this.height);
         this.setMazeMap(generator.generateMaze());
-        this.createEndPos(generator.getEndPos());
         this.createPlayer(generator.getStartPos()[0], generator.getStartPos()[1]);
         
     }
@@ -144,42 +141,7 @@ public class Maze extends Game{
         this.setMazeMap(maze);
     }
 
-    public void createEndPos(int[] endPos){
-
-        int pushX = 0;
-        int pushY = 0;
-        
-       
-        int x = endPos[0];
-        int y = endPos[1];
-        String[][] maze = this.getMazeMap();
-        this.endPos[0] = x;
-        this.endPos[1] = y;
-        maze[endPos[1]][endPos[0]] = this.getPath();
-
-        if(y == 1){
-            pushY-=1;
-        }else if(y == maze.length-2){
-            pushY+=1;
-        }
-        if(x == 1){
-            pushX-=1;
-        }else if(x == maze[0].length-2){
-            pushX +=1;
-        }
-
-        double flip = Math.random();
-        if(flip > 0.50){
-            pushY = 0;
-        }else{
-            pushX = 0;
-        }
-        this.endPos[0] = x+pushX;
-        this.endPos[1] = y+pushY;
-        maze[this.endPos[1]][this.endPos[0]] = this.getPath();
-        this.setMazeMap(maze);
-      
-    }
+    
     public String[][] getMazeMap() {
         if(this.mazeMap == null){
             this.mazeMap = createMaze();
@@ -193,6 +155,7 @@ public class Maze extends Game{
 
 }
 
+//Fix end point and start point
 class MazeGenerator extends Maze{
 
     private int startPos[] = new int[2];
@@ -244,8 +207,7 @@ class MazeGenerator extends Maze{
         int next[] = pathfinder.nextPosition();
         if(pathfinder.getHasNextMove()){
             paths.add(next);
-            maze[pathfinder.getCurrentPos()[1]][pathfinder.getCurrentPos()[0]] = this.getPath();
-            
+            maze[next[1]][next[0]] = this.getPath();
         }else{
           traversed.add(pathfinder.getCurrentPos());
           paths.remove(paths.size()-1);
@@ -260,4 +222,5 @@ public int[] getStartPos() {
 public int[] getEndPos() {
     return endPos;
 }
+
 }

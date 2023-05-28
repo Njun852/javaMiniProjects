@@ -1,4 +1,5 @@
 package organ;
+
 import java.util.Scanner;
 
 public class Main {
@@ -71,7 +72,5 @@ public class Main {
             }
         }
         scan.close();
-  
-
     }
 }

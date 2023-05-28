@@ -1,6 +1,5 @@
+package mazegame;
 import java.util.ArrayList;
-
-
 
 public class Game {
     private final String player = "()";
@@ -31,15 +30,12 @@ public class Game {
     public void iSOver(boolean isOver){
         this.gameOver = isOver;
     }
+
+    
 }
 
 class Tools{
-    public static int[] getDistance(int x1, int x2, int y1, int y2){
-        int diffX = Math.abs(x1-x2);
-        int diffY = Math.abs(y1-y2);
-        int diff[] = {diffX, diffY};
-        return diff;
-    }
+
     public static int generateRandomIndex(int min, int max){
 
         return (int)Math.max(min, Math.floor(Math.random()*max));
@@ -47,17 +43,15 @@ class Tools{
 
     public static int indexOfGreatestElement(double[] arr){
         double bestElement = arr[0];
-        int bestIndex = -1;
+        int bestIndex = 0;
         for(int i = 0; i < arr.length; i++){
-            if(arr[i] >= bestElement){
+            if(arr[i] > bestElement){
                 bestElement = arr[i];
                 bestIndex = i;
             }
         }
         return bestIndex;
     }
-
- 
 }
 
 
@@ -68,6 +62,7 @@ class Pathfinder extends Game{
     private int x;
     private int y;
 
+    //Make direction to array and use for loop to reduce if statements
     private boolean hasLeft;
     private boolean hasRight;
     private boolean hasTop;
@@ -143,10 +138,25 @@ class Pathfinder extends Game{
     
     }
 
+    public void neighborPositionCheck(int[] direction, int index){
+
+    boolean hasDirection = 
+    this.maze[direction[1]][direction[0]].equals(this.getPath()) &&
+    direction[0] != this.x && direction[1] != this.y;
+
+        if(hasDirection){
+            directionPoints[index] = 0;
+        }
+    }
+    public boolean isTraversed(int[] pos, int index){
+
+        return pos[0] ==
+        traversed.get(index)[0] &&
+        pos[1] == traversed.get(index)[1];
+    }
     public void neighborCheck(){
         //up down left right
         ArrayList<Neighbor> n = new ArrayList<>();
-
         if(moveRight[0] < rightOfMaze){
             Neighbor newNeighbor = new Neighbor(moveRight, this,rightIndex);
             n.add(newNeighbor);
@@ -164,61 +174,39 @@ class Pathfinder extends Game{
             n.add(newNeighbor);
         }
 
-
         for(int i = 0; i < n.size(); i++){
             Neighbor current = n.get(i);
-            int[] currentPos = {this.x, this.y};
+            int index = current.getIndex();
             if(current.nexthasUp()){
-              
-                int up[] = current.getUp();
-                
-                boolean hasPathUp = this.maze[up[1]][up[0]].equals(this.getPath()) && up[0] != currentPos[0] && up[1] != currentPos[1];
-                if(hasPathUp){
-                    directionPoints[current.getIndex()] = 0;
-                }
+                neighborPositionCheck(current.getUp(), index);
             }
             if(current.nexthasDown()){
-                int down[] = current.getDown();
-                boolean hasPathDown = this.maze[down[1]][down[0]].equals(this.getPath()) && down[0] != currentPos[0] && down[1] != currentPos[1];
-        
-                if(hasPathDown){
-                    directionPoints[current.getIndex()] = 0;
-                }
+                neighborPositionCheck(current.getDown(), index);
             }
             if(current.nexthasLeft()){
-                int left[] = current.getLeft();
-                
-                boolean hasPathLeft = this.maze[left[1]][left[0]].equals(this.getPath()) && left[0] != currentPos[0] && left[1] != currentPos[1];
-               
-                if(hasPathLeft){
-                    directionPoints[current.getIndex()] = 0;
-                }
+                neighborPositionCheck(current.getLeft(), index);
             }
             if(current.nexthasRight()){
-                int right[] = current.getRight();
-                boolean hasPathRight = this.maze[right[1]][right[0]].equals(this.getPath()) && right[0] != currentPos[0] && right[1] != currentPos[1];
-                if(hasPathRight){
-                    directionPoints[current.getIndex()] = 0;
-                }
+                neighborPositionCheck(current.getRight(), index);
             }
         }
     }
 
-
+   
     public void traverseChecking(){
 
         for(int i = 0; i < traversed.size(); i++){
 
-            if(moveDown[0] == traversed.get(i)[0] && moveDown[1] == traversed.get(i)[1]){
+            if(isTraversed(moveDown, i)){
                 directionPoints[bottomIndex] = 0;
             }
-            if(moveUp[0] == traversed.get(i)[0] && moveUp[1] == traversed.get(i)[1]){
+            if(isTraversed(moveUp, i)){
                 directionPoints[topIndex] = 0;
             }
-            if(moveRight[0] == traversed.get(i)[0] && moveRight[1] == traversed.get(i)[1]){
+            if(isTraversed(moveRight, i)){
                 directionPoints[rightIndex] = 0;
             }
-            if(moveLeft[0] == traversed.get(i)[0] && moveLeft[1] == traversed.get(i)[1]){
+            if(isTraversed(moveLeft, i)){
                 directionPoints[leftIndex] = 0;
             }
         }
@@ -254,21 +242,7 @@ class Pathfinder extends Game{
         boundsCheck();
         nextCheck();
         traverseChecking();
-        nextCheck();
         neighborCheck();
-
-        // if(moveUp[0] == this.endPos[0] && moveUp[1] == this.endPos[1]){
-        //     directionPoints[topIndex] = 1;
-        // }
-        // if(moveDown[0] == this.endPos[0] && moveDown[1] == this.endPos[1]){
-        //     directionPoints[bottomIndex] = 1;
-        // }
-        // if(moveRight[0] == this.endPos[0] && moveRight[1] == this.endPos[1]){
-        //     directionPoints[rightIndex] = 1;
-        // }
-        // if(moveLeft[0] == this.endPos[0] && moveLeft[1] == this.endPos[1]){
-        //     directionPoints[leftIndex] = 1;
-        // }
         double[] randomChance = new double[4];
         int[] nextPos = {0, 0};
         for(int i =0; i < directions.length; i++){
@@ -292,7 +266,6 @@ class Pathfinder extends Game{
             break;
         }
        
-   
         if(directionPoints[0]+directionPoints[1]+directionPoints[2]+directionPoints[3] == 0){
             this.hasNextMove = false;
         }else{
@@ -352,6 +325,8 @@ class Neighbor{
         neighbor = position;
     }
 
+
+    //directions of next position
     public boolean nexthasUp(){
         return up[1] > pathfinder.getTopOfMaze();
     }
@@ -367,6 +342,7 @@ class Neighbor{
     }
 
 
+    //next position
     public boolean hasUp(){
         return neighbor[1] > pathfinder.getTopOfMaze();
     }

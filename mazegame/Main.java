@@ -1,4 +1,4 @@
-
+package mazegame;
 import java.util.Scanner;
 
 public class Main {
@@ -6,8 +6,8 @@ public class Main {
     public static void main(String[] args) {
 
         //size of the maze
-        int width = 10;
-        int height = 10;
+        int width = 40;
+        int height = 20;
 
         Maze myMaze = new Maze(width, height);
         myMaze.createRandomMaze();
