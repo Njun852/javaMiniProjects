@@ -1,11 +1,19 @@
-package mazegame;
 import java.util.ArrayList;
 
 public class Game {
-    private final String player = "()";
-    private final String path = "  ";
-    private final String wall = "██";
+    private String player = "()";
+    private String username;
+    private int bestTime = -1;
+    private int solvedMazes = 0;
+    private String path = "  ";
+    private String wall = "██";
     private boolean gameOver = false;
+
+    private GameScreen screen;
+    Maze maze;
+    public Game(){
+        screen = new GameScreen(this);
+    }
 
     private int[] playerPos = new int[2];
 
@@ -30,8 +38,128 @@ public class Game {
     public void iSOver(boolean isOver){
         this.gameOver = isOver;
     }
+    public void playGame(int w, int h){
+        maze = new Maze(w, h);
+        maze.createRandomMaze();
+        maze.renderMaze();
+    }
+    public GameScreen getScreen() {
+        return screen;
+    }
+    public String getUsername() {
+        return username;
+    }
+    public int getBestTime() {
+        return bestTime;
+    }
+    public int getSolvedMazes() {
+        return solvedMazes;
+    }
+    public void setBestTime(int bestTime) {
+        this.bestTime = bestTime;
+    }
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    public void setSolvedMazes(int solvedMazes) {
+        this.solvedMazes = solvedMazes;
+    }
+}
 
+
+class GameScreen{
+    private Game game;
+    public GameScreen(Game game){
+        this.game = game;
+    }
+    public void mainMenu(){
+        System.out.println("Main Menu:");
+        makeList("Play", "Profile", "Quit Game");
+    }
+    public void playMenu(){
+        System.out.println("Select difficulty:");
+        makeList("Easy", "Normal", "Hard", "Extreme", "Back");
+    }
+    public void profileMenu(){
+        System.out.println("Your Profile:");
+        String time = Timer.getTime(game.getBestTime());
+        String solvedmazes = game.getSolvedMazes()+"";
     
+        if(game.getSolvedMazes() == 1){
+            solvedmazes += " maze.";
+        }else{
+            solvedmazes += " mazes";
+        }
+        if(game.getSolvedMazes() == 0){
+            solvedmazes = "No games played.";
+        }
+        if(game.getBestTime() == -1){
+            time = "No games played";
+        }
+    
+        makeList("Username: "+game.getUsername(), "Maze Solved: "+solvedmazes, "Best Time: "+time);
+    }
+
+    public void makeList(String ... list){
+        for(int i = 0; i < list.length; i++){
+            System.out.println("  "+(i+1)+": "+list[i]);
+        }
+    }
+    public void gameOverMenu(){
+        System.out.println("Select:");
+        makeList("Play Again", "Main Menu");
+    }
+}
+
+class Timer implements Runnable{
+    private int timer;
+    private boolean stopTimer = false;
+
+    public static String getTime(int timer){
+        String timeTaken = "";
+        double seconds = timer;
+        double minutes = seconds/60;
+        if(Math.floor(minutes)> 0){
+            timeTaken += (int)(Math.floor(minutes))+" minutes";
+            seconds = (minutes-(Math.floor(minutes)))*60;
+            if(Math.floor(seconds) > 0){
+                timeTaken+= " and ";
+            }else{
+                timeTaken+= ".";
+            }
+        }
+        if(Math.floor(seconds) >= 0){
+            timeTaken += (int)(Math.floor(seconds))+" seconds.";
+        }
+        return timeTaken;
+    }
+    public void stop(){
+        stopTimer = true;
+        
+    }
+    public void showTime(){
+        System.out.println("Time taken: "+getTime(timer));
+    }
+
+    public void run(){
+        while(!stopTimer){
+            timer+=1;
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+               System.out.println("Something happened");
+            }   
+        }
+    }
+    
+    public void start(){
+       
+        Thread thread = new Thread(this);
+        thread.start();
+    }
+public int getTimer() {
+    return timer;
+}
 }
 
 class Tools{
@@ -52,92 +180,59 @@ class Tools{
         }
         return bestIndex;
     }
+
 }
 
 
-//Clean this code
 class Pathfinder extends Game{
 
     private String[][] maze;
     private int x;
     private int y;
 
-    //Make direction to array and use for loop to reduce if statements
-    private boolean hasLeft;
-    private boolean hasRight;
-    private boolean hasTop;
-    private boolean hasBottom;
-    
-    private int[] moveLeft = {0, 0};
-    private int[] moveUp = {0, 0};
-    private int[] moveDown = {0, 0};
-    private int[] moveRight = {0, 0};
-
-    //use <
-    private int bottomOfMaze;
-    private int rightOfMaze;
-    //use >
-    private int topOfMaze;
-    private int leftOfMaze;
-
     private String[] directions = {"top", "bottom", "left", "right"};
     private int[] directionPoints = {1, 1, 1, 1};
-    private final int leftIndex = 2;
-    private final int rightIndex = 3;
-    private final int topIndex = 0;
-    private final int bottomIndex = 1;
 
+    //top bottom left right
+    private int moves[][] = new int[4][2];
+    private int edges[] = new int[4];
+    private boolean hasThisMove[] = new boolean[4];
+    private boolean comparator[] = new boolean[4];
+    private int posIndex[] = {0, 1, 2, 3};
     private boolean hasNextMove;
-    private ArrayList<int[]> traversed;
 
-    //Extra
-    private int[] endPos = new int[2];
 
-    public Pathfinder(String[][] maze, int x, int y, ArrayList<int[]> traversed){
+
+    public Pathfinder(String[][] maze, int x, int y){
         this.maze = maze;
         this.x = x;
         this.y = y;
 
-        bottomOfMaze = maze.length-1;
-        topOfMaze = 0;
-        rightOfMaze = maze[0].length-1;
-        leftOfMaze = 0;
+        int edges[] = {0, maze.length-1, 0, maze[0].length-1};
+        this.edges = edges;
 
-        hasLeft = x > leftOfMaze+1;
-        hasRight = x < rightOfMaze-1;
-        hasBottom = y <bottomOfMaze-1;
-        hasTop = y > topOfMaze+1;
+        boolean hasThisMoves[] = { y > edges[0]+1, y < edges[1]-1, x > edges[2]+1, x < edges[3]-1};
+        this.hasThisMove = hasThisMoves;
 
-        moveLeft[0] = x-1;
-        moveLeft[1] = y;
+        int moves[][] = {{x, y-1},{x, y+1}, {x-1, y}, {x+1, y}};
+        this.moves = moves;
+ 
+        this.comparator[0] = this.moves[0][1] > edges[0];
+        this.comparator[1] = this.moves[1][1] < edges[1];
+        this.comparator[2] = this.moves[2][0] > edges[2];
+        this.comparator[3] = this.moves[3][0] < edges[3];
 
-        moveRight[1] = y;
-        moveRight[0] = x+1;
-        
-        moveDown[1] = y+1;
-        moveDown[0] = x;
-        moveUp[1] = y-1;
-        moveUp[0] = x;
-        this.traversed = traversed;
-       
     }
     
     public void boundsCheck(){
-        if(!hasLeft){
-            directionPoints[leftIndex] = 0;
-        }
-        if(!hasRight){
-            directionPoints[rightIndex] = 0;
-        }
-        if(!hasTop){
-            directionPoints[topIndex] = 0;
-        }
-        if(!hasBottom){
-            directionPoints[bottomIndex] = 0;
+
+        for(int i = 0; i < hasThisMove.length; i++){
+            if(!hasThisMove[i]){
+                directionPoints[posIndex[i]] = 0;
+            }
         }
     
     }
-
     public void neighborPositionCheck(int[] direction, int index){
 
     boolean hasDirection = 
@@ -148,101 +243,60 @@ class Pathfinder extends Game{
             directionPoints[index] = 0;
         }
     }
-    public boolean isTraversed(int[] pos, int index){
 
-        return pos[0] ==
-        traversed.get(index)[0] &&
-        pos[1] == traversed.get(index)[1];
-    }
     public void neighborCheck(){
-        //up down left right
         ArrayList<Neighbor> n = new ArrayList<>();
-        if(moveRight[0] < rightOfMaze){
-            Neighbor newNeighbor = new Neighbor(moveRight, this,rightIndex);
-            n.add(newNeighbor);
+        final int maxNeighbors = 4;
+        for(int j = 0; j < maxNeighbors; j++){
+            if(comparator[j]){
+                Neighbor neighbor = new Neighbor(moves[j], this, posIndex[j]);
+                n.add(neighbor);
+            }
         }
-        if(moveDown[1] < bottomOfMaze){
-            Neighbor newNeighbor = new Neighbor(moveDown, this, bottomIndex);
-            n.add(newNeighbor);
-        }
-        if(moveUp[1] > topOfMaze){
-            Neighbor newNeighbor = new Neighbor(moveUp, this, topIndex);
-            n.add(newNeighbor);
-        }
-        if(moveLeft[0] > leftOfMaze){
-            Neighbor newNeighbor = new Neighbor(moveLeft, this, leftIndex);
-            n.add(newNeighbor);
-        }
-
         for(int i = 0; i < n.size(); i++){
             Neighbor current = n.get(i);
             int index = current.getIndex();
-            if(current.nexthasUp()){
-                neighborPositionCheck(current.getUp(), index);
+     
+            for(int j = 0; j < 4; j++){
+            if(current.hasNextPosition()[j]){
+                neighborPositionCheck(current.getPos()[j], index);
             }
-            if(current.nexthasDown()){
-                neighborPositionCheck(current.getDown(), index);
-            }
-            if(current.nexthasLeft()){
-                neighborPositionCheck(current.getLeft(), index);
-            }
-            if(current.nexthasRight()){
-                neighborPositionCheck(current.getRight(), index);
-            }
+         }
         }
     }
 
-   
-    public void traverseChecking(){
-
-        for(int i = 0; i < traversed.size(); i++){
-
-            if(isTraversed(moveDown, i)){
-                directionPoints[bottomIndex] = 0;
-            }
-            if(isTraversed(moveUp, i)){
-                directionPoints[topIndex] = 0;
-            }
-            if(isTraversed(moveRight, i)){
-                directionPoints[rightIndex] = 0;
-            }
-            if(isTraversed(moveLeft, i)){
-                directionPoints[leftIndex] = 0;
-            }
+    public boolean hasAPath(int direction[], int edge, int index){
+        boolean hasAPath = false;
+        int posIndex = 0;
+        if(index < 2){
+            posIndex = 1;
         }
-    }
 
+        boolean isAPath =  direction[posIndex] < edge;
+        if(index%2 == 0){
+            isAPath = direction[posIndex] > edge;
+        }
+
+        if(isAPath){
+            hasAPath = this.maze[direction[1]][direction[0]].equals(this.getPath());
+        }
+        return hasAPath;
+    }
     public void nextCheck(){
 
-        if(moveDown[1] < bottomOfMaze && moveDown[0] < rightOfMaze && moveDown[0] > leftOfMaze){
-            if(this.maze[moveDown[1]][moveDown[0]].equals(this.getPath())){
-                directionPoints[bottomIndex] = 0;
+        for(int i = 0; i < moves.length; i++){
+            if(hasAPath(moves[i], edges[i], i)){
+                directionPoints[posIndex[i]] = 0;
             }
-        }
-        if(moveLeft[0] > leftOfMaze && moveLeft[1] < bottomOfMaze && moveLeft[1] > topOfMaze){
-            if(this.maze[moveLeft[1]][moveLeft[0]].equals(this.getPath())){
-                directionPoints[leftIndex] = 0;
-            }
-        }
-        if(moveRight[0] < rightOfMaze && moveRight[1] < bottomOfMaze && moveRight[1] > topOfMaze){
-            if(this.maze[moveRight[1]][moveRight[0]].equals(this.getPath())){
-                directionPoints[rightIndex] = 0;
-            }
-        }
-        if(moveUp[1] > topOfMaze && moveUp[0] < rightOfMaze && moveUp[0] > leftOfMaze){
-            if(this.maze[moveUp[1]][moveUp[0]].equals(this.getPath())){
-                directionPoints[topIndex] = 0;
-            }
-            
         }
 
     }
 
     public int[] nextPosition(){
         boundsCheck();
-        nextCheck();
-        traverseChecking();
         neighborCheck();
+        nextCheck();
+        
         double[] randomChance = new double[4];
         int[] nextPos = {0, 0};
         for(int i =0; i < directions.length; i++){
@@ -251,21 +305,15 @@ class Pathfinder extends Game{
 
         int randomIndex = Tools.indexOfGreatestElement(randomChance);
         String pos = directions[randomIndex];
-        switch(pos){
-            case "top":
-            nextPos = moveUp;
-            break;
-            case "bottom":
-            nextPos = moveDown;
-            break;
-            case "left":
-            nextPos = moveLeft;
-            break;
-            case "right":
-            nextPos = moveRight;
+
+        for(int j = 0; j < directions.length; j++){
+
+        if(pos.equals(directions[j])){
+            nextPos = moves[j];
             break;
         }
-       
+
+       }
         if(directionPoints[0]+directionPoints[1]+directionPoints[2]+directionPoints[3] == 0){
             this.hasNextMove = false;
         }else{
@@ -277,43 +325,31 @@ class Pathfinder extends Game{
     public boolean getHasNextMove(){
         return hasNextMove;
     }
-    public int getTopOfMaze() {
-        return topOfMaze;
-    }
-    public int getBottomOfMaze() {
-        return bottomOfMaze;
-    }
-    public int getRightOfMaze() {
-        return rightOfMaze;
-    }
-    public int getLeftOfMaze() {
-        return leftOfMaze;
-    }
+   
     public int[] getCurrentPos(){
         int[] currentPos = {x, y};
         return currentPos;
     }
-    public int[] getEndPos() {
-        return endPos;
-    }
-    public void setEndPos(int[] endPos) {
-        this.endPos = endPos;
+
+    public int[] getEdges() {
+        return edges;
     }
 }
 
 
 class Neighbor{
-    private Pathfinder pathfinder;
+   
     private int index;
     private int up[] = {0, 0};
     private int down[] = {0, 0};
     private int right[] = {0, 0};
     private int left[] = {0, 0};
-    private int[] neighbor;
+    private boolean[] comparator = new boolean[4];
+    private boolean[] nextcomparator = new boolean[4];  
+
 
     public Neighbor(int[] position, Pathfinder p, int index){
         this.index = index;
-        this.pathfinder = p;
         up[1] = position[1]-1;
         up[0] = position[0];
         down[0] = position[0];
@@ -322,55 +358,31 @@ class Neighbor{
         right[1] = position[1];
         left[1] = position[1];
         left[0] = position[0]-1;
-        neighbor = position;
+        int[]edges = p.getEdges();
+        int[] toCompare = {edges[0], edges[1], edges[2], edges[3]};
+        boolean comparator[] = {position[1] > toCompare[0], position[1] < toCompare[1],
+        position[0] > toCompare[2], position[0] < toCompare[3]};
+        this.comparator = comparator;
+        boolean nextcomparator[] = {up[1] > toCompare[0], down[1] < toCompare[1], left[0] > toCompare[2], right[0] < toCompare[3]};
+        this.nextcomparator = nextcomparator;
+       
     }
 
+    public boolean[] nextHasPosition(){
 
-    //directions of next position
-    public boolean nexthasUp(){
-        return up[1] > pathfinder.getTopOfMaze();
-    }
-
-    public boolean nexthasDown(){
-        return down[1] < pathfinder.getBottomOfMaze();
-    }
-    public boolean nexthasRight(){
-        return right[0] < pathfinder.getRightOfMaze();
-    }
-    public boolean nexthasLeft(){
-        return left[0] > pathfinder.getLeftOfMaze();
+        return this.nextcomparator;    
     }
 
-
-    //next position
-    public boolean hasUp(){
-        return neighbor[1] > pathfinder.getTopOfMaze();
-    }
-
-    public boolean hasDown(){
-        return neighbor[1] < pathfinder.getBottomOfMaze();
-    }
-    public boolean hasRight(){
-        return neighbor[0] < pathfinder.getRightOfMaze();
-    }
-    public boolean hasLeft(){
-        return neighbor[0] > pathfinder.getLeftOfMaze();
+    public boolean[] hasNextPosition(){
+        return this.comparator;
     }
 
     public int getIndex() {
         return index;
     }
-    public int[] getUp() {
-        return up;
-    }
-    public int[] getDown() {
-        return down;
-    }
-    public int[] getRight() {
-        return right;
-    }
-    public int[] getLeft() {
-        return left;
+    public int[][] getPos(){
+        int[][] pos = {this.up, this.down, this.left, this.right};
+        return pos;
     }
     
 }

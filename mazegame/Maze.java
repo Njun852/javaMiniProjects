@@ -1,4 +1,3 @@
-package mazegame;
 import java.util.ArrayList;
 
 public class Maze extends Game{
@@ -11,7 +10,6 @@ public class Maze extends Game{
         this.width = width;
         this.height = height;
     }
-
     public String[][] createMaze(){
         String maze[][] = new String[this.height][this.width];
 
@@ -35,7 +33,11 @@ public class Maze extends Game{
         MazeGenerator generator = new MazeGenerator(this.width, this.height);
         this.setMazeMap(generator.generateMaze());
         this.createPlayer(generator.getStartPos()[0], generator.getStartPos()[1]);
+        this.endPos[0] = generator.getEndPos()[0];
+        this.endPos[1] = generator.getEndPos()[1];
+        String maze[][] = this.getMazeMap();
         
+        this.setMazeMap(maze);
     }
     public int getWidth() {
         return width;
@@ -56,7 +58,6 @@ public class Maze extends Game{
             System.out.println("");
         }
     }
-
     public void createPlayer(int x, int y){
         String[][] maze = this.getMazeMap();
         maze[y][x] = this.getPlayer();
@@ -68,7 +69,6 @@ public class Maze extends Game{
             this.iSOver(true);
         }
     }
-
     public void movePlayer(String direction){
         //current position
         int playerPos[] = getPlayerPos();
@@ -104,7 +104,6 @@ public class Maze extends Game{
             playerNewPos[1] = playerPos[1];
         }
         
-
        createPlayer(playerNewPos[0], playerNewPos[1]);
     }
     public void updateMazeMap(int x, int y, String newContent){
@@ -113,35 +112,6 @@ public class Maze extends Game{
         this.setMazeMap(maze);
     }
 
-    public void setRandomPlayerPosition(){
-        String[][] maze = this.getMazeMap();
-
-        //top bottom left right
-        ArrayList<int[]> postion = new ArrayList<>();
-
-        for(int y = 1; y < maze.length-1; y++){
-            for(int x = 1; x < maze[y].length-1; x++){
-
-                boolean positionIsEmpty = maze[y][x] == this.getPath();
-             
-                if(positionIsEmpty &&  (x == 1 || x == maze[0].length-2 || y == 1 || y == maze.length-2)){
-                    int[] availablePosition = {x, y};
-                    postion.add(availablePosition);
-                }
-            }
-        }
-
-        int randomIndex = Tools.generateRandomIndex(0, postion.size());
-        int x = postion.get(randomIndex)[0];
-        int y = postion.get(randomIndex)[1];
-        int playerPos[] = {x, y};
-
-        this.setPlayerPos(playerPos);
-        maze[y][x] = this.getPlayer();
-        this.setMazeMap(maze);
-    }
-
-    
     public String[][] getMazeMap() {
         if(this.mazeMap == null){
             this.mazeMap = createMaze();
@@ -155,7 +125,6 @@ public class Maze extends Game{
 
 }
 
-//Fix end point and start point
 class MazeGenerator extends Maze{
 
     private int startPos[] = new int[2];
@@ -167,6 +136,7 @@ class MazeGenerator extends Maze{
     public String[][] generateMaze(){
         initializeMaze();
         randomWalk();
+        generateEndPos();
         return this.getMazeMap();
     }
     public void initializeMaze(){
@@ -179,41 +149,70 @@ class MazeGenerator extends Maze{
             }
         }
 
-        // int indexX = Tools.generateRandomIndex(1, maze[0].length-1);
-        // int indexY = Tools.generateRandomIndex(1, maze.length-1);
-        
         int[][] edge = {{1, 1}, {maze[0].length-2, 1}, {1, maze.length-2}, {maze[0].length-2, maze.length-2}};
         int randomIndex = Tools.generateRandomIndex(0, edge.length);
       
         startPos[0] = edge[randomIndex][0];
         startPos[1] = edge[randomIndex][1];
 
-        endPos[0] = edge[3-randomIndex][0];
-        endPos[1] = edge[3-randomIndex][1];
-        //maze[edge[randomIndex][1]][edge[randomIndex ][0]] = this.getPath();
-    
         this.setMazeMap(maze);
     }
 
     public void randomWalk(){
       ArrayList<int[]> paths = new ArrayList<>();
-      ArrayList<int[]> traversed = new ArrayList<>();
       paths.add(startPos);
       String[][] maze = this.getMazeMap();
-  
-      while( paths.size() > 0){
-        Pathfinder pathfinder = new Pathfinder(maze, paths.get(paths.size()-1)[0], paths.get(paths.size()-1)[1], traversed);
-        pathfinder.setEndPos(this.endPos);
+   
+      while(paths.size() > 0){
+        Pathfinder pathfinder = new Pathfinder(maze, paths.get(paths.size()-1)[0], paths.get(paths.size()-1)[1]);
         int next[] = pathfinder.nextPosition();
         if(pathfinder.getHasNextMove()){
             paths.add(next);
             maze[next[1]][next[0]] = this.getPath();
         }else{
-          traversed.add(pathfinder.getCurrentPos());
           paths.remove(paths.size()-1);
         }
      this.setMazeMap(maze);
     }
+}
+
+public void generateEndPos(){
+    String[][] maze = this.getMazeMap();
+    int x = 1;
+    int y = 0;
+    int max = maze.length/2;
+    int min = 1;
+    int randomIndex = 0;
+    ArrayList<Integer> availableList = new ArrayList<>();
+
+    if(startPos[0] == 1){
+        x = maze[0].length-2;
+    }
+    if(startPos[1] == 1){
+        min = maze.length/2;
+        max = maze.length-2;
+    }
+
+    System.out.println(max);
+    System.out.println(min);
+    for(int i = min; i < max; i++){
+        if(maze[i][x].equals(this.getPath())){
+            
+            availableList.add(i);
+        }
+    }
+    randomIndex = Tools.generateRandomIndex(0, availableList.size());
+    y = availableList.get(randomIndex);
+    
+    if(x == 1){
+        x-=1;
+    }else{
+        x+=1;
+    }
+    endPos[0] = x;
+    endPos[1] = y;
+    maze[endPos[1]][endPos[0]] = this.getPath();
+    this.setMazeMap(maze);
 }
 public int[] getStartPos() {
     return startPos;
